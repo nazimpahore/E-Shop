@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import mongoose from 'mongoose';
 import authRoutes from './authRoutes.js';
 import productRoutes from './productRoutes.js';
 import categoryRoutes from './categoryRoutes.js';
@@ -19,8 +20,11 @@ router.use('/admin', adminRoutes);
 
 // Health check endpoint
 router.get('/health', (req, res) => {
+  const states = ['disconnected', 'connected', 'connecting', 'disconnecting'];
   res.status(200).json({
     status: 'ok',
+    database: states[mongoose.connection.readyState] || 'unknown',
+    databaseConnected: mongoose.connection.readyState === 1,
     timestamp: new Date().toISOString(),
     uptime: process.uptime()
   });
