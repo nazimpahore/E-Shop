@@ -48,6 +48,20 @@ if (process.env.NODE_ENV !== 'test') {
 // Mount API routes
 app.use('/api', routes);
 
+// Root welcome endpoint
+app.get('/', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'E-Shop Backend API is running smoothly on Vercel!',
+    healthCheck: '/api/health',
+    endpoints: {
+      products: '/api/products',
+      categories: '/api/categories',
+      auth: '/api/auth'
+    }
+  });
+});
+
 // 404 & Centralized Error Handlers
 app.use(notFound);
 app.use(errorHandler);
