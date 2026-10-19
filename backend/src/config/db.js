@@ -7,6 +7,7 @@ const DEFAULT_DIRECT_URI =
  * Connect to MongoDB with resilient fallback for Windows SRV DNS resolution (EBADRESP)
  */
 let cachedPromise = null;
+export let lastConnectionError = null;
 
 export const connectDB = async () => {
   if (mongoose.connection.readyState === 1) {
@@ -26,10 +27,12 @@ export const connectDB = async () => {
     });
 
     const conn = await cachedPromise;
+    lastConnectionError = null;
     console.log(`[Database] MongoDB Connected: ${conn.connection.host}/${conn.connection.name}`);
     return conn;
   } catch (error) {
     cachedPromise = null;
+    lastConnectionError = error.message;
 
     // Windows c-ares DNS UDP packet truncation fix for mongodb+srv
     if (error.message.includes('querySrv') || error.message.includes('EBADRESP')) {

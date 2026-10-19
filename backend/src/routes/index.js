@@ -18,6 +18,8 @@ router.use('/wishlist', wishlistRoutes);
 router.use('/orders', orderRoutes);
 router.use('/admin', adminRoutes);
 
+import { lastConnectionError } from '../config/db.js';
+
 // Health check endpoint
 router.get('/health', (req, res) => {
   const states = ['disconnected', 'connected', 'connecting', 'disconnecting'];
@@ -25,6 +27,8 @@ router.get('/health', (req, res) => {
     status: 'ok',
     database: states[mongoose.connection.readyState] || 'unknown',
     databaseConnected: mongoose.connection.readyState === 1,
+    connectionError: lastConnectionError,
+    hasMongoUriEnv: !!process.env.MONGODB_URI,
     timestamp: new Date().toISOString(),
     uptime: process.uptime()
   });
