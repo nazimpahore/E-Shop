@@ -1,0 +1,6 @@
+{
+  "name": "E-Shop — Modern E-Commerce Website",
+  "description": "A clean, modern, professional e-commerce frontend featuring responsive product catalogs, filters, cart, wishlist, checkout flow, and customer account.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
