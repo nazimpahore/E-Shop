@@ -113,4 +113,47 @@ describe('E-Shop Unit Business Logic Tests', () => {
       assert.equal(pricing.total, 27.00);
     });
   });
+
+  describe('24-Hour Order Cancellation Policy', () => {
+    it('should allow order cancellation when order was created 2 hours ago (within 24h window)', () => {
+      const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+      const order = {
+        id: 'ORD-TEST1',
+        createdAt: twoHoursAgo,
+        status: 'Processing'
+      };
+
+      const result = orderService.canCancelOrder(order);
+      assert.equal(result.allowed, true);
+      assert.ok(result.hoursRemaining > 21 && result.hoursRemaining <= 22);
+    });
+
+    it('should reject order cancellation when order was created 25 hours ago (> 24h window)', () => {
+      const twentyFiveHoursAgo = new Date(Date.now() - 25 * 60 * 60 * 1000);
+      const order = {
+        id: 'ORD-TEST2',
+        createdAt: twentyFiveHoursAgo,
+        status: 'Processing'
+      };
+
+      const result = orderService.canCancelOrder(order);
+      assert.equal(result.allowed, false);
+      assert.match(result.reason, /within 24 hours/i);
+    });
+
+    it('should reject cancellation if order is already Delivered or Shipped', () => {
+      const oneHourAgo = new Date(Date.now() - 1 * 60 * 60 * 1000);
+      const deliveredOrder = { id: 'ORD-TEST3', createdAt: oneHourAgo, status: 'Delivered' };
+      const shippedOrder = { id: 'ORD-TEST4', createdAt: oneHourAgo, status: 'Shipped' };
+
+      const resDelivered = orderService.canCancelOrder(deliveredOrder);
+      const resShipped = orderService.canCancelOrder(shippedOrder);
+
+      assert.equal(resDelivered.allowed, false);
+      assert.match(resDelivered.reason, /delivered/i);
+
+      assert.equal(resShipped.allowed, false);
+      assert.match(resShipped.reason, /shipped/i);
+    });
+  });
 });

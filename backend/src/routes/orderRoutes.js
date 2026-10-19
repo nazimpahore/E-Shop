@@ -15,4 +15,8 @@ router.get('/my-orders', protect, orderController.getMyOrders);
 // Single order receipt / details
 router.get('/:id', optionalAuth, orderController.getOrderById);
 
+// Cancel order within 24 hours of placement (supports PATCH & POST)
+router.patch('/:id/cancel', optionalAuth, orderController.cancelOrder);
+router.post('/:id/cancel', optionalAuth, orderController.cancelOrder);
+
 export default router;

@@ -245,5 +245,104 @@ export const orderService = {
   async getUserOrders(userId) {
     const orders = await Order.find({ user: userId }).sort({ createdAt: -1 });
     return orders.map((o) => o.toJSON());
+  },
+
+  /**
+   * Helper to evaluate 24-hour order cancellation eligibility
+   */
+  canCancelOrder(order, now = Date.now()) {
+    if (!order) return { allowed: false, reason: 'Order not found' };
+    if (order.status === 'Cancelled') {
+      return { allowed: false, reason: 'Order is already cancelled' };
+    }
+    if (order.status === 'Delivered') {
+      return { allowed: false, reason: 'Delivered orders cannot be cancelled' };
+    }
+    if (order.status === 'Shipped') {
+      return { allowed: false, reason: 'Order has already shipped and cannot be cancelled directly' };
+    }
+
+    const orderTime = new Date(order.createdAt).getTime();
+    const msElapsed = now - orderTime;
+    const hoursElapsed = msElapsed / (1000 * 60 * 60);
+
+    if (hoursElapsed > 24) {
+      return {
+        allowed: false,
+        reason: 'Order can only be cancelled within 24 hours of placement',
+        hoursElapsed
+      };
+    }
+
+    return {
+      allowed: true,
+      hoursRemaining: Math.max(0, 24 - hoursElapsed)
+    };
+  },
+
+  /**
+   * Cancel an order within 24 hours of placement
+   */
+  async cancelOrder(orderId, { userId = null, isAdmin = false, guestEmail = null, reason = '' } = {}) {
+    const query = {
+      $or: [{ id: orderId }]
+    };
+
+    if (mongoose.Types.ObjectId.isValid(orderId)) {
+      query.$or.push({ _id: orderId });
+    }
+
+    const order = await Order.findOne(query);
+    if (!order) {
+      throw new Error(`Order #${orderId} was not found.`);
+    }
+
+    // Permission checks
+    if (!isAdmin) {
+      if (order.user) {
+        if (!userId || order.user.toString() !== userId.toString()) {
+          throw new Error('Access denied to cancel this order.');
+        }
+      } else {
+        // Guest order: check if email matches
+        if (guestEmail && order.customer?.email?.toLowerCase() !== guestEmail.toLowerCase()) {
+          throw new Error('Access denied: Email does not match this guest order.');
+        }
+      }
+    }
+
+    // 24-Hour window verification
+    const eligibility = this.canCancelOrder(order);
+    if (!isAdmin && !eligibility.allowed) {
+      throw new Error(eligibility.reason);
+    }
+
+    // Restock product quantities
+    if (order.items && order.items.length > 0) {
+      for (const item of order.items) {
+        const productLookupId = item.product?.id || item.productId || item.id;
+        if (productLookupId) {
+          const pQuery = { $or: [{ id: productLookupId }] };
+          if (mongoose.Types.ObjectId.isValid(productLookupId)) {
+            pQuery.$or.push({ _id: productLookupId });
+          }
+          await Product.updateOne(pQuery, {
+            $inc: { stockCount: item.quantity },
+            inStock: true
+          });
+        }
+      }
+    }
+
+    // Update order status
+    order.status = 'Cancelled';
+    order.cancellationReason = reason?.trim() || 'Cancelled by customer within 24-hour window';
+    order.cancelledAt = new Date();
+    if (order.paymentStatus === 'paid') {
+      order.paymentStatus = 'refunded';
+    }
+
+    await order.save();
+    return order.toJSON();
   }
 };

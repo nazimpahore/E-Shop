@@ -13,7 +13,8 @@ import {
   CheckCircle2,
   Clock,
   Shield,
-  Info
+  Info,
+  XCircle
 } from 'lucide-react';
 import Breadcrumbs from '../components/common/Breadcrumbs.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -303,35 +304,81 @@ export default function AccountPage() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {orders.map((o) => (
-                      <div
-                        key={o.id}
-                        className="border border-slate-200 rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 hover:border-slate-300 transition-colors"
-                      >
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-slate-900 text-sm">#{o.id}</span>
-                            <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-teal-50 text-teal-800 border border-teal-200">
-                              {o.status}
-                            </span>
-                          </div>
-                          <p className="text-xs text-slate-500">
-                            {new Date(o.createdAt).toLocaleDateString()} • {o.items?.length || 1} {(o.items?.length || 1) === 1 ? 'item' : 'items'}
-                          </p>
-                          <p className="text-xs font-semibold text-slate-800">
-                            Total: ${(o.pricing?.total || 0).toFixed(2)}
-                          </p>
-                        </div>
+                    {orders.map((o) => {
+                      const orderTime = new Date(o.createdAt).getTime();
+                      const elapsedHours = (Date.now() - orderTime) / (1000 * 60 * 60);
+                      const isWithin24Hours = elapsedHours <= 24;
+                      const hoursLeft = Math.max(0, Math.floor(24 - elapsedHours));
+                      const isCancelled = o.status === 'Cancelled';
+                      const isDelivered = o.status === 'Delivered';
+                      const isShipped = o.status === 'Shipped';
+                      const canCancel = isWithin24Hours && !isCancelled && !isDelivered && !isShipped;
 
-                        <Link
-                          to={`/orders/${o.id}`}
-                          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition-colors"
+                      return (
+                        <div
+                          key={o.id}
+                          className="border border-slate-200 rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 hover:border-slate-300 transition-colors"
                         >
-                          <span>View Details</span>
-                          <ExternalLink className="w-3.5 h-3.5" />
-                        </Link>
-                      </div>
-                    ))}
+                          <div className="space-y-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="font-bold text-slate-900 text-sm">#{o.id}</span>
+                              <span
+                                className={`px-2 py-0.5 rounded text-[10px] font-semibold border ${
+                                  isCancelled
+                                    ? 'bg-rose-50 text-rose-800 border-rose-200'
+                                    : isDelivered
+                                    ? 'bg-teal-50 text-teal-800 border-teal-200'
+                                    : 'bg-blue-50 text-blue-800 border-blue-200'
+                                }`}
+                              >
+                                {o.status}
+                              </span>
+
+                              {canCancel && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+                                  <Clock className="w-3 h-3 text-amber-600" />
+                                  <span>Cancel eligible ({hoursLeft}h left)</span>
+                                </span>
+                              )}
+                            </div>
+
+                            <p className="text-xs text-slate-500">
+                              {new Date(o.createdAt).toLocaleDateString()} at {new Date(o.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {o.items?.length || 1} {(o.items?.length || 1) === 1 ? 'item' : 'items'}
+                            </p>
+
+                            <p className="text-xs font-semibold text-slate-800">
+                              Total: ${(o.pricing?.total || 0).toFixed(2)}
+                            </p>
+
+                            {isCancelled && o.cancellationReason && (
+                              <p className="text-[11px] text-rose-600 font-medium">
+                                Cancellation: {o.cancellationReason}
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            {canCancel && (
+                              <Link
+                                to={`/orders/${o.id}`}
+                                className="inline-flex items-center gap-1 px-3 py-2 rounded-lg border border-rose-200 text-rose-700 hover:bg-rose-50 text-xs font-semibold transition-colors"
+                              >
+                                <XCircle className="w-3.5 h-3.5 text-rose-600" />
+                                <span>Cancel Order</span>
+                              </Link>
+                            )}
+
+                            <Link
+                              to={`/orders/${o.id}`}
+                              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition-colors"
+                            >
+                              <span>View Receipt</span>
+                              <ExternalLink className="w-3.5 h-3.5" />
+                            </Link>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>

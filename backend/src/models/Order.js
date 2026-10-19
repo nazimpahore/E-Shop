@@ -92,6 +92,14 @@ const orderSchema = new mongoose.Schema(
     trackingNumber: {
       type: String,
       default: () => `TRK-USPS-${Math.floor(10000000 + Math.random() * 90000000)}`
+    },
+    cancellationReason: {
+      type: String,
+      default: null
+    },
+    cancelledAt: {
+      type: Date,
+      default: null
     }
   },
   {

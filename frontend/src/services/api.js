@@ -518,6 +518,58 @@ export const apiService = {
   },
 
   /**
+   * Cancel an order within 24 hours of placement
+   */
+  async cancelOrder(id, reason = '', email = '') {
+    try {
+      const res = await apiRequest(`/orders/${id}/cancel`, {
+        method: 'PATCH',
+        body: JSON.stringify({ reason, email })
+      });
+
+      // Synchronize in local storage for instant UI responsiveness
+      try {
+        const orders = JSON.parse(localStorage.getItem('eshop_orders') || '[]');
+        const updated = orders.map((o) =>
+          o.id === id || o._id === id
+            ? { ...o, status: 'Cancelled', cancellationReason: reason, cancelledAt: new Date().toISOString() }
+            : o
+        );
+        localStorage.setItem('eshop_orders', JSON.stringify(updated));
+      } catch {
+        // ignore
+      }
+
+      return {
+        success: true,
+        data: res.data || res.order,
+        message: res.message || 'Order cancelled successfully'
+      };
+    } catch (networkErr) {
+      if (networkErr.status) {
+        throw new Error(networkErr.message || 'Failed to cancel order.');
+      }
+      console.warn('[API Service] Backend offline during order cancellation, falling back to local update');
+      try {
+        const orders = JSON.parse(localStorage.getItem('eshop_orders') || '[]');
+        const updated = orders.map((o) =>
+          o.id === id || o._id === id
+            ? { ...o, status: 'Cancelled', cancellationReason: reason, cancelledAt: new Date().toISOString() }
+            : o
+        );
+        localStorage.setItem('eshop_orders', JSON.stringify(updated));
+        return {
+          success: true,
+          data: { id, status: 'Cancelled' },
+          message: 'Order cancelled successfully'
+        };
+      } catch {
+        throw new Error('Failed to update local order.');
+      }
+    }
+  },
+
+  /**
    * Reviews
    */
   async getProductReviews(productId) {

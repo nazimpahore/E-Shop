@@ -68,5 +68,33 @@ export const orderController = {
       }
       next(err);
     }
+  },
+
+  /**
+   * PATCH /api/orders/:id/cancel
+   * POST /api/orders/:id/cancel
+   * Cancel an order within 24 hours of creation
+   */
+  async cancelOrder(req, res, next) {
+    try {
+      const { id } = req.params;
+      const { reason, email } = req.body;
+      const userId = req.user ? req.user._id : null;
+      const isAdmin = req.user?.role === 'admin';
+
+      const cancelled = await orderService.cancelOrder(id, {
+        userId,
+        isAdmin,
+        guestEmail: email,
+        reason
+      });
+
+      return sendSuccess(res, cancelled, 'Order successfully cancelled within 24-hour window');
+    } catch (err) {
+      if (err.message.includes('Access denied')) {
+        return sendError(res, err.message, 403);
+      }
+      return sendError(res, err.message, 400);
+    }
   }
 };
