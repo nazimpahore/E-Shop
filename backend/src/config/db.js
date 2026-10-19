@@ -7,6 +7,10 @@ const DEFAULT_DIRECT_URI =
  * Connect to MongoDB with resilient fallback for Windows SRV DNS resolution (EBADRESP)
  */
 export const connectDB = async () => {
+  if (mongoose.connection.readyState >= 1) {
+    return mongoose.connection;
+  }
+
   let uri = process.env.MONGODB_URI || DEFAULT_DIRECT_URI;
 
   try {
