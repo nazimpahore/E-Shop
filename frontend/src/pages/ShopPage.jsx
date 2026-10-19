@@ -77,7 +77,7 @@ export default function ShopPage() {
           limit: 100 // Load all matching to support load more
         });
 
-        setProducts(res.data);
+        setProducts(Array.isArray(res?.data) ? res.data : []);
         setVisibleCount(8);
       } catch (err) {
         console.error('Failed to query products', err);

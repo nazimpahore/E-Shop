@@ -19,9 +19,9 @@ export default function HomePage() {
           apiService.getTrendingProducts(4),
           apiService.getCategories()
         ]);
-        setFeaturedProducts(featRes.data);
-        setTrendingProducts(trendRes.data);
-        setCategories(catRes.data);
+        setFeaturedProducts(Array.isArray(featRes?.data) ? featRes.data : []);
+        setTrendingProducts(Array.isArray(trendRes?.data) ? trendRes.data : []);
+        setCategories(Array.isArray(catRes?.data) ? catRes.data : []);
       } catch (err) {
         console.error('Failed to load homepage data', err);
       } finally {
@@ -125,7 +125,7 @@ export default function HomePage() {
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-          {categories.map((cat) => (
+          {(Array.isArray(categories) ? categories : []).map((cat) => (
             <Link
               key={cat.id}
               to={`/shop?category=${cat.slug}`}

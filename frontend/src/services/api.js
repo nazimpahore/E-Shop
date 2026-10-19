@@ -6,7 +6,21 @@
 
 import { PRODUCTS, CATEGORIES } from '../data/products.js';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+// Normalize API_BASE_URL: ensure https protocol, no trailing slash, and ends with /api
+function getNormalizedApiUrl() {
+  let url = (import.meta.env.VITE_API_BASE_URL || '').trim();
+  if (!url) return 'http://localhost:5000/api';
+  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    url = `https://${url}`;
+  }
+  url = url.replace(/\/+$/, '');
+  if (!url.endsWith('/api')) {
+    url = `${url}/api`;
+  }
+  return url;
+}
+
+const API_BASE_URL = getNormalizedApiUrl();
 const TOKEN_KEY = 'eshop_auth_token';
 
 // Helper to delay for mock fallback
@@ -23,13 +37,19 @@ async function apiRequest(endpoint, options = {}) {
     ...options.headers
   };
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  const response = await fetch(`${API_BASE_URL}${cleanEndpoint}`, {
     ...options,
     headers,
     credentials: 'include' // Sends HttpOnly cookie
   });
 
-  const data = await response.json().catch(() => ({}));
+  const contentType = response.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    throw new Error(`Expected JSON response from ${cleanEndpoint}, received: ${contentType || 'non-json'}`);
+  }
+
+  const data = await response.json();
 
   if (!response.ok) {
     const errorMsg = data.message || `Request failed with status ${response.status}`;
